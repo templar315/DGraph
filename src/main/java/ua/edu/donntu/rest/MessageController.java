@@ -1,14 +1,17 @@
 package ua.edu.donntu.rest;
 
+import com.dropbox.core.DbxException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import ua.edu.donntu.dto.MessageDTO;
+import ua.edu.donntu.dto.MessageInDTO;
+import ua.edu.donntu.dto.MessageOutDTO;
 import ua.edu.donntu.service.MessageService;
 import ua.edu.donntu.service.exceptions.*;
 
@@ -25,15 +28,11 @@ public class MessageController {
     private final MessageService messageService;
 
     @PostMapping
-    public ResponseEntity<MessageDTO> save(@RequestPart(name = "message") MessageDTO messageDTO,
-                                           @RequestPart(name = "file") MultipartFile file) throws FileSaveException,
-                                                                                                  FileDownloadException,
-                                                                                                  MessageAlreadyExistException,
-                                                                                                  EmptyNullableFieldException {
-        log.debug("REST Request to save Message: {}", messageDTO);
-        messageDTO.setReceiveDate(new Date());
-        messageDTO.setSaveDate(null);
-        MessageDTO message = messageService.save(messageDTO, file);
+    public ResponseEntity<MessageOutDTO> save(@RequestPart(name = "message") @Validated MessageInDTO messageInDTO,
+                                              @RequestPart(name = "file") MultipartFile file) throws FileSaveException,
+                                                                                                     FileDownloadException {
+        log.debug("REST Request to save Message: {}", messageInDTO);
+        MessageOutDTO message = messageService.save(messageInDTO, file);
         if(message != null) return ResponseEntity.status(HttpStatus.CREATED).body(message);
         else return ResponseEntity.badRequest().build();
     }
@@ -46,30 +45,30 @@ public class MessageController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MessageDTO> getOne(@PathVariable long id) {
+    public ResponseEntity<MessageOutDTO> getOne(@PathVariable long id) {
         log.debug("REST Request to get Message with id" + id);
-        MessageDTO message = messageService.getOne(id);
+        MessageOutDTO message = messageService.getOne(id);
         if(message != null) return ResponseEntity.ok(message);
         else return ResponseEntity.notFound().build();
     }
 
     @GetMapping
-    public ResponseEntity<List<MessageDTO>> getAll() {
+    public ResponseEntity<List<MessageOutDTO>> getAll() {
         log.debug("REST Request to get all Messages");
         return ResponseEntity.ok(messageService.getAll());
     }
 
     @GetMapping(params = "sender")
-    public ResponseEntity<List<MessageDTO>> getAllBySender(@RequestParam long sender) {
+    public ResponseEntity<List<MessageOutDTO>> getAllBySender(@RequestParam long sender) {
         log.debug("REST Request to get all Messages with sender id: " + sender);
-        List<MessageDTO> messages = messageService.getAllMessagesBySender(sender);
+        List<MessageOutDTO> messages = messageService.getAllMessagesBySender(sender);
         return ResponseEntity.ok(messages);
     }
 
     @GetMapping(params = "recipient")
-    public ResponseEntity<List<MessageDTO>> getAllByRecipient(@RequestParam long recipient) {
+    public ResponseEntity<List<MessageOutDTO>> getAllByRecipient(@RequestParam long recipient) {
         log.debug("REST Request to get all Messages with recipient id: " + recipient);
-        List<MessageDTO> messages = messageService.getAllMessagesByRecipient(recipient);
+        List<MessageOutDTO> messages = messageService.getAllMessagesByRecipient(recipient);
         return ResponseEntity.ok(messages);
     }
 

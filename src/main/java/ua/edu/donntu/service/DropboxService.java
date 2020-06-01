@@ -17,6 +17,7 @@ import ua.edu.donntu.service.exceptions.FileDownloadException;
 import ua.edu.donntu.service.exceptions.FileSaveException;
 
 import java.io.*;
+import java.util.Arrays;
 
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
@@ -65,11 +66,10 @@ public class DropboxService {
         }
     }
 
-    public boolean delete(String dropboxPath) throws FileDeleteException {
+    public void delete(String dropboxPath) throws FileDeleteException {
         log.debug("Request to delete file by dropbox path: " + dropboxPath);
         try {
             getClient().files().deleteV2(dropboxPath);
-            return true;
         } catch (DbxException exception) {
             log.error("Dropbox delete error: " + exception);
             throw new FileDeleteException("Error while deleting file");

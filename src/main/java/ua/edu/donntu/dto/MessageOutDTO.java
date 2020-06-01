@@ -5,26 +5,28 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.validation.constraints.Size;
 import java.io.Serializable;
-import java.util.List;
+import java.util.Date;
 
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class NodeDTO implements Serializable {
+public class MessageOutDTO implements Serializable {
 
     private static final long serialVersionUID = -4961377427252156715L;
 
     private long id;
 
-    private String host;
+    private Date sendDate;
 
-    private boolean nativeNode;
+    private Date receiveDate;
 
-    private List<Long> sentMessages;
+    private Date saveDate;
 
-    private List<Long> receivedMessages;
+    private String hash;
 
+    private String senderHost;
+
+    private String recipientHost;
 }

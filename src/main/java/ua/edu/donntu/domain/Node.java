@@ -1,6 +1,8 @@
 package ua.edu.donntu.domain;
 
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
+
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.List;
@@ -25,6 +27,7 @@ public class Node implements Serializable {
     private String host;
 
     @Column(name = "native_node", nullable = false)
+    @ColumnDefault("false")
     private boolean nativeNode;
 
     @OneToMany(mappedBy = "sender", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})

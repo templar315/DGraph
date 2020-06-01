@@ -6,17 +6,14 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import ua.edu.donntu.domain.Node;
-import ua.edu.donntu.dto.MessageDTO;
+import ua.edu.donntu.dto.MessageInDTO;
+import ua.edu.donntu.dto.MessageOutDTO;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Date;
 
@@ -32,17 +29,17 @@ public class PropagationThread extends Thread {
     @SneakyThrows
     public void run() {
         CloseableHttpClient httpClient = HttpClients.createDefault();
-        HttpPost uploadFile = new HttpPost(recipientHost);
+        HttpPost uploadFile = new HttpPost("http://" + recipientHost);
         Gson gson = new Gson();
 
-        MessageDTO messageDTO = MessageDTO.builder()
+        MessageInDTO messageInDTO = MessageInDTO.builder()
                 .sendDate(new Date())
                 .senderHost(senderHost)
                 .recipientHost(recipientHost)
                 .build();
 
         HttpEntity multipart = MultipartEntityBuilder.create()
-                .addTextBody("message", gson.toJson(messageDTO), ContentType.APPLICATION_JSON)
+                .addTextBody("message", gson.toJson(messageInDTO), ContentType.APPLICATION_JSON)
                 .addBinaryBody("file", fileStream)
                 .build();
 

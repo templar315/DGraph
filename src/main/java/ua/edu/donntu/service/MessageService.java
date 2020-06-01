@@ -1,5 +1,6 @@
 package ua.edu.donntu.service;
 
+import com.dropbox.core.DbxException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,7 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import ua.edu.donntu.domain.Message;
 import ua.edu.donntu.domain.Node;
-import ua.edu.donntu.dto.MessageDTO;
+import ua.edu.donntu.dto.MessageInDTO;
+import ua.edu.donntu.dto.MessageOutDTO;
 import ua.edu.donntu.repository.MessageRepository;
 import ua.edu.donntu.repository.NodeRepository;
 import ua.edu.donntu.service.exceptions.*;
@@ -39,25 +41,23 @@ public class MessageService {
 
     private final DropboxService dropboxService;
 
-    protected Message fromDTO(MessageDTO messageDTO) {
-        if (messageDTO == null) {
+    protected Message fromDTO(MessageInDTO messageInDTO) {
+        if (messageInDTO == null) {
             return null;
         } else {
             return Message.builder()
-                    .id(messageDTO.getId())
-                    .sendDate(messageDTO.getSendDate())
-                    .receiveDate(messageDTO.getReceiveDate())
-                    .sender(nodeRepository.getByHost(messageDTO.getSenderHost()))
-                    .recipient(nodeRepository.getByHost(messageDTO.getRecipientHost()))
+                    .sendDate(messageInDTO.getSendDate())
+                    .sender(nodeRepository.getByHost(messageInDTO.getSenderHost()))
+                    .recipient(nodeRepository.getByHost(messageInDTO.getRecipientHost()))
                     .build();
         }
     }
 
-    protected MessageDTO toDTO(Message message) {
+    protected MessageOutDTO toDTO(Message message) {
         if (message == null) {
             return null;
         } else {
-            return MessageDTO.builder()
+            return MessageOutDTO.builder()
                     .id(message.getId())
                     .sendDate(message.getSendDate())
                     .receiveDate(message.getReceiveDate())
@@ -70,22 +70,12 @@ public class MessageService {
     }
 
     @Transactional
-    public MessageDTO save(MessageDTO messageDTO, MultipartFile messageFile) throws EmptyNullableFieldException,
-                                                                                    MessageAlreadyExistException,
-                                                                                    FileSaveException,
-                                                                                    FileDownloadException {
-        log.debug("Request to save Message: {}", messageDTO);
+    public MessageOutDTO save(MessageInDTO messageInDTO, MultipartFile messageFile) throws FileSaveException,
+                                                                                           FileDownloadException {
+        log.debug("Request to save Message: {}", messageInDTO);
 
-        if (!checkNonNullableFields(messageDTO)) {
-            log.error("Non nullable field is empty");
-            throw new EmptyNullableFieldException("Non nullable field is empty");
-        }
-
-        if (nodeRepository.existsById(messageDTO.getId())) {
-            log.error("Message already exist");
-            throw new MessageAlreadyExistException("Message already exist");
-        }
-
+        Message message = fromDTO(messageInDTO);
+        message.setReceiveDate(new Date());
         StringBuilder filePath = new StringBuilder();
         String hash = "";
 
@@ -102,7 +92,7 @@ public class MessageService {
                         .append(name.substring(name.lastIndexOf(".")));
                 dropboxService.upload(messageFile.getInputStream(), filePath.toString());
 
-                Message message = fromDTO(messageDTO);
+
                 message.setFilePath(filePath.toString());
                 message.setSaveDate(new Date());
                 message.setHash(hash);
@@ -133,12 +123,12 @@ public class MessageService {
         return false;
     }
 
-    public MessageDTO getOne(long id) {
+    public MessageOutDTO getOne(long id) {
         log.debug("Request to get Message with id: " + id);
         return toDTO(messageRepository.getOne(id));
     }
 
-    public List<MessageDTO> getAll() {
+    public List<MessageOutDTO> getAll() {
         log.debug("Request to get all Messages");
         return messageRepository
                 .findAll()
@@ -147,7 +137,7 @@ public class MessageService {
                 .collect(Collectors.toList());
     }
 
-    public List<MessageDTO> getAllMessagesBySender(long id) {
+    public List<MessageOutDTO> getAllMessagesBySender(long id) {
         log.debug("Request to get all Messages with Sender id: " + id);
         Node node = nodeRepository.getOne(id);
         return node.getSentMessages()
@@ -156,22 +146,13 @@ public class MessageService {
                 .collect(Collectors.toList());
     }
 
-    public List<MessageDTO> getAllMessagesByRecipient(long id) {
+    public List<MessageOutDTO> getAllMessagesByRecipient(long id) {
         log.debug("Request to get all Messages with Recipient id: " + id);
         Node node = nodeRepository.getOne(id);
         return node.getReceivedMessages()
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
-    }
-
-    private boolean checkNonNullableFields(MessageDTO messageDTO) {
-        return messageDTO.getSendDate() != null
-                && messageDTO.getReceiveDate() != null
-                && messageDTO.getSenderHost() != null
-                && !messageDTO.getSenderHost().isEmpty()
-                && messageDTO.getRecipientHost() != null
-                && !messageDTO.getRecipientHost().isEmpty();
     }
 
     private void startPropagation(InputStream fileStream) {

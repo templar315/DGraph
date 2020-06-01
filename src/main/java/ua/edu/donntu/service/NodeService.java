@@ -9,7 +9,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import ua.edu.donntu.domain.Message;
 import ua.edu.donntu.domain.Node;
-import ua.edu.donntu.dto.NodeDTO;
+import ua.edu.donntu.dto.NodeInDTO;
+import ua.edu.donntu.dto.NodeOutDTO;
 import ua.edu.donntu.repository.NodeRepository;
 import ua.edu.donntu.service.exceptions.EmptyNullableFieldException;
 import ua.edu.donntu.service.exceptions.ObjectUniquenessException;
@@ -34,23 +35,21 @@ public class NodeService {
 
     private final NodeRepository nodeRepository;
 
-    private Node fromDTO(NodeDTO nodeDTO) {
-        if (nodeDTO == null) {
+    private Node fromInDTO(NodeInDTO nodeInDTO) {
+        if (nodeInDTO == null) {
             return null;
         } else {
             return Node.builder()
-                    .id(nodeDTO.getId())
-                    .host(nodeDTO.getHost())
-                    .nativeNode(nodeDTO.isNativeNode())
+                    .host(nodeInDTO.getHost())
                     .build();
         }
     }
 
-    private NodeDTO toDTO(Node node) {
+    private NodeOutDTO toOutDTO(Node node) {
         if (node == null) {
             return null;
         } else {
-            return NodeDTO.builder()
+            return NodeOutDTO.builder()
                     .id(node.getId())
                     .host(node.getHost())
                     .nativeNode(node.isNativeNode())
@@ -73,53 +72,44 @@ public class NodeService {
     }
 
     @Transactional
-    public NodeDTO save(NodeDTO nodeDTO) throws NodeAlreadyExistException, EmptyNullableFieldException {
-        log.debug("Request to save Node: {}", nodeDTO);
+    public NodeOutDTO save(NodeInDTO nodeInDTO) throws NodeAlreadyExistException {
+        log.debug("Request to save Node: {}", nodeInDTO);
 
-        if (!checkNonNullableFields(nodeDTO)) {
-            log.error("Non nullable field is empty");
-            throw new EmptyNullableFieldException("Non nullable field is empty");
-        }
-
-        if (nodeRepository.existsById(nodeDTO.getId())
-                || nodeRepository.getByHost(nodeDTO.getHost()) != null) {
+        if (nodeRepository.getByHost(nodeInDTO.getHost()) != null) {
             log.error("Node already exist");
             throw new NodeAlreadyExistException("Node already exist");
         }
 
-        if (isNativeNode(nodeDTO)) {
-            nodeDTO.setNativeNode(nodeRepository.getNodeByNativeNodeIsTrue() == null);
+        Node node = fromInDTO(nodeInDTO);
+
+        if (isNativeNode(node)) {
+            node.setNativeNode(nodeRepository.getNodeByNativeNodeIsTrue() == null);
         }
 
-        return toDTO(nodeRepository.saveAndFlush(fromDTO(nodeDTO)));
+        return toOutDTO(nodeRepository.saveAndFlush(node));
     }
 
     @Transactional
-    public NodeDTO update(NodeDTO nodeDTO) throws NodeDoesNotExistException, EmptyNullableFieldException, ObjectUniquenessException {
-        log.debug("Request to update Node: {}", nodeDTO);
+    public NodeOutDTO update(Long id, NodeInDTO nodeInDTO) throws NodeDoesNotExistException, ObjectUniquenessException {
+        log.debug("Request to update Node: {}", nodeInDTO);
 
-        if (!checkNonNullableFields(nodeDTO)) {
-            log.error("Non nullable field is empty");
-            throw new EmptyNullableFieldException("Non nullable field is empty");
-        }
-
-        Node checkNode = nodeRepository.getOne(nodeDTO.getId());
+        Node checkNode = nodeRepository.getOne(id);
 
         if (checkNode == null) {
             log.error("Node does not exist");
             throw new NodeDoesNotExistException("Node does not exist");
         }
 
-        Node checkByHostNode = nodeRepository.getByHost(nodeDTO.getHost());
+        Node checkByHostNode = nodeRepository.getByHost(nodeInDTO.getHost());
 
         if ((checkByHostNode != null && checkNode != checkByHostNode)) {
             log.error("Node is not unique");
             throw new ObjectUniquenessException("Node is not unique");
         }
 
-        return toDTO(nodeRepository.saveAndFlush(
+        return toOutDTO(nodeRepository.saveAndFlush(
                 checkNode.toBuilder()
-                    .host(nodeDTO.getHost())
+                    .host(nodeInDTO.getHost())
                     .build()));
     }
 
@@ -132,23 +122,23 @@ public class NodeService {
         return true;
     }
 
-    public NodeDTO getOne(long id) {
+    public NodeOutDTO getOne(long id) {
         log.debug("Request to get Node by id: " + id);
-        return toDTO(nodeRepository.getOne(id));
+        return toOutDTO(nodeRepository.getOne(id));
     }
 
-    public List<NodeDTO> getAll() {
+    public List<NodeOutDTO> getAll() {
         log.debug("Request to get all Nodes");
         return nodeRepository
                 .findAll()
                 .stream()
-                .map(this::toDTO)
+                .map(this::toOutDTO)
                 .collect(Collectors.toList());
     }
 
-    public NodeDTO getNativeNode() {
+    public NodeOutDTO getNativeNode() {
         log.debug("Request to get server Node data");
-        return toDTO(nodeRepository.getNodeByNativeNodeIsTrue());
+        return toOutDTO(nodeRepository.getNodeByNativeNodeIsTrue());
     }
 
     @EventListener(ContextRefreshedEvent.class)
@@ -157,17 +147,13 @@ public class NodeService {
         if (getNativeNode() == null) {
             nodeRepository.saveAndFlush(Node.builder()
                     .host(getHost())
+                    .nativeNode(true)
                     .build());
         }
     }
 
-    private boolean checkNonNullableFields(NodeDTO nodeDTO) {
-        return nodeDTO.getHost() != null
-                && !nodeDTO.getHost().isEmpty();
-    }
-
-    private boolean isNativeNode(NodeDTO nodeDTO) {
-        return nodeDTO.getHost().equals(getHost());
+    private boolean isNativeNode(Node node) {
+        return node.getHost().equals(getHost());
     }
 
     private String getHost() {

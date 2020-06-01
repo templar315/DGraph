@@ -6,8 +6,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ua.edu.donntu.dto.NodeDTO;
+import ua.edu.donntu.dto.NodeInDTO;
+import ua.edu.donntu.dto.NodeOutDTO;
 import ua.edu.donntu.service.NodeService;
 import ua.edu.donntu.service.exceptions.EmptyNullableFieldException;
 import ua.edu.donntu.service.exceptions.NodeAlreadyExistException;
@@ -26,20 +28,21 @@ public class NodeController {
     private final NodeService nodeService;
 
     @PostMapping
-    public ResponseEntity<NodeDTO> save(@RequestBody NodeDTO nodeDTO) throws EmptyNullableFieldException,
-                                                                             NodeAlreadyExistException {
-        log.debug("REST Request to save Node: {}", nodeDTO);
-        NodeDTO node = nodeService.save(nodeDTO);
+    public ResponseEntity<NodeOutDTO> save(@RequestBody @Validated NodeInDTO nodeInDTO) throws
+                                                                            NodeAlreadyExistException {
+        log.debug("REST Request to save Node: {}", nodeInDTO);
+        NodeOutDTO node = nodeService.save(nodeInDTO);
         if (node != null) return ResponseEntity.status(HttpStatus.CREATED).body(node);
         else return ResponseEntity.badRequest().build();
     }
 
-    @PutMapping
-    public ResponseEntity<NodeDTO> update(@RequestBody NodeDTO nodeDTO) throws EmptyNullableFieldException,
-                                                                               NodeDoesNotExistException,
-                                                                               ObjectUniquenessException {
-        log.debug("REST Request to update Node: {}", nodeDTO);
-        NodeDTO node = nodeService.update(nodeDTO);
+    @PutMapping("/{id}")
+    public ResponseEntity<NodeOutDTO> update(@PathVariable Long id,
+                                             @RequestBody @Validated NodeInDTO nodeInDTO) throws
+                                                                            NodeDoesNotExistException,
+                                                                            ObjectUniquenessException {
+        log.debug("REST Request to update Node: {}", nodeInDTO);
+        NodeOutDTO node = nodeService.update(id, nodeInDTO);
         if(node != null) return ResponseEntity.ok(node);
         else return ResponseEntity.badRequest().build();
     }
@@ -52,23 +55,23 @@ public class NodeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<NodeDTO> getOne(@PathVariable long id) {
+    public ResponseEntity<NodeOutDTO> getOne(@PathVariable long id) {
         log.debug("REST Request to get Node with id: " + id);
-        NodeDTO node = nodeService.getOne(id);
+        NodeOutDTO node = nodeService.getOne(id);
         if (node != null) return ResponseEntity.ok(node);
         else return ResponseEntity.notFound().build();
     }
 
     @GetMapping
-    public ResponseEntity<List<NodeDTO>> getAll() {
+    public ResponseEntity<List<NodeOutDTO>> getAll() {
         log.debug("REST Request to get all Nodes");
         return ResponseEntity.ok(nodeService.getAll());
     }
 
     @GetMapping("/native")
-    public ResponseEntity<NodeDTO> getNative() {
+    public ResponseEntity<NodeOutDTO> getNative() {
         log.debug("REST Request to get Node data");
-        NodeDTO node = nodeService.getNativeNode();
+        NodeOutDTO node = nodeService.getNativeNode();
         if(node != null) return ResponseEntity.ok(node);
         else return ResponseEntity.notFound().build();
     }
