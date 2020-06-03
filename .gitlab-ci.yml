@@ -9,8 +9,8 @@ services:
 stages:
   - deploy
 
-production:
-  stage: production
+deploy:
+  stage: deploy
   before_script:
     - mkdir -p ~/.ssh
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
