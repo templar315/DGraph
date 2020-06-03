@@ -35,7 +35,7 @@ public class PropagationThread extends Thread {
     @SneakyThrows
     public void run() {
         CloseableHttpClient httpClient = HttpClients.createDefault();
-        HttpPost uploadFile = new HttpPost("http://" + recipientHost);
+        HttpPost uploadFile = new HttpPost("http://" + recipientHost + "/messages");
         Gson gson = new Gson();
 
         MessageInDTO messageInDTO = MessageInDTO.builder()
