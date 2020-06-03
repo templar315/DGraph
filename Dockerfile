@@ -1,7 +1,6 @@
-FROM openjdk:8-jdk-alpine
+FROM maven:3.6.3-jdk-8
 VOLUME /tmp
 EXPOSE 8080
-RUN sudo apt update -y && sudo apt install maven
 RUN mvn -B package
 ARG JAR_FILE=target/DGraph-1.0-SNAPSHOT.jar
 ADD ${JAR_FILE} springbootdocker.jar
