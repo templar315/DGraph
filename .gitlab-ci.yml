@@ -1,0 +1,26 @@
+image: tmaier/docker-compose:latest
+
+variables:
+  DOCKER_DRIVER: overlay
+  HEROKU_STAGING_REGISTRY_IMAGE: registry.heroku.com/${HEROKU_STAGING}/web
+
+services:
+  - docker:dind
+
+stages:
+  - deploy
+
+production:
+  stage: production
+  before_script:
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - export DOCKER_HOST="ssh://${PROD_SERVER_USER}@${PROD_SERVER_HOST}"
+  script:
+    - ssh -o "StrictHostKeyChecking no" ${PROD_SERVER_USER}@${PROD_SERVER_HOST} 'sudo yum -y update && sudo yum -y upgrade'
+    - docker-compose down
+    - docker-compose rm -fs && docker system prune -fa
+    - docker-compose up -d --remove-orphans
+  when:
+    manual
