@@ -1,6 +1,5 @@
 package ua.edu.donntu.rest;
 
-import com.dropbox.core.DbxException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +14,8 @@ import ua.edu.donntu.dto.MessageOutDTO;
 import ua.edu.donntu.service.MessageService;
 import ua.edu.donntu.service.exceptions.*;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.Context;
 import java.util.Date;
 import java.util.List;
 
@@ -29,10 +30,11 @@ public class MessageController {
 
     @PostMapping
     public ResponseEntity<MessageOutDTO> save(@RequestPart(name = "message") @Validated MessageInDTO messageInDTO,
-                                              @RequestPart(name = "file") MultipartFile file) throws FileSaveException,
-                                                                                                     FileDownloadException {
+                                              @RequestPart(name = "file") MultipartFile file,
+                                              @Context HttpServletRequest requestContext) throws FileSaveException,
+                                                                                                 FileDownloadException {
         log.debug("REST Request to save Message: {}", messageInDTO);
-        MessageOutDTO message = messageService.save(messageInDTO, file);
+        MessageOutDTO message = messageService.save(messageInDTO, file, requestContext.getRemoteHost());
         if(message != null) return ResponseEntity.status(HttpStatus.CREATED).body(message);
         else return ResponseEntity.badRequest().build();
     }
@@ -59,22 +61,9 @@ public class MessageController {
     }
 
     @GetMapping(params = "sender")
-    public ResponseEntity<List<MessageOutDTO>> getAllBySender(@RequestParam long sender) {
-        log.debug("REST Request to get all Messages with sender id: " + sender);
+    public ResponseEntity<List<MessageOutDTO>> getAllBySender(@RequestParam String sender) {
+        log.debug("REST Request to get all Messages with sender host: " + sender);
         List<MessageOutDTO> messages = messageService.getAllMessagesBySender(sender);
         return ResponseEntity.ok(messages);
-    }
-
-    @GetMapping(params = "recipient")
-    public ResponseEntity<List<MessageOutDTO>> getAllByRecipient(@RequestParam long recipient) {
-        log.debug("REST Request to get all Messages with recipient id: " + recipient);
-        List<MessageOutDTO> messages = messageService.getAllMessagesByRecipient(recipient);
-        return ResponseEntity.ok(messages);
-    }
-
-    @GetMapping("/init")
-    public ResponseEntity<Date> init() {
-        log.debug("REST Request to create initial Messages data");
-        return ResponseEntity.ok(new Date());
     }
 }

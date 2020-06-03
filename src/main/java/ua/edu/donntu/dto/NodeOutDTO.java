@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.util.List;
 
 @Data
 @Builder(toBuilder = true)
@@ -21,9 +20,4 @@ public class NodeOutDTO implements Serializable {
     private String host;
 
     private boolean nativeNode;
-
-    private List<Long> sentMessages;
-
-    private List<Long> receivedMessages;
-
 }

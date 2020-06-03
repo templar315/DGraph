@@ -17,6 +17,8 @@ import ua.edu.donntu.service.exceptions.*;
 import ua.edu.donntu.service.utils.PropagationThread;
 
 import javax.transaction.Transactional;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
@@ -24,6 +26,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static ua.edu.donntu.service.NodeService.NATIVE_HOST;
 
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
@@ -47,8 +51,6 @@ public class MessageService {
         } else {
             return Message.builder()
                     .sendDate(messageInDTO.getSendDate())
-                    .sender(nodeRepository.getByHost(messageInDTO.getSenderHost()))
-                    .recipient(nodeRepository.getByHost(messageInDTO.getRecipientHost()))
                     .build();
         }
     }
@@ -57,25 +59,28 @@ public class MessageService {
         if (message == null) {
             return null;
         } else {
+
             return MessageOutDTO.builder()
                     .id(message.getId())
                     .sendDate(message.getSendDate())
                     .receiveDate(message.getReceiveDate())
                     .saveDate(message.getSaveDate())
                     .hash(message.getHash())
-                    .senderHost(message.getSender().getHost())
-                    .recipientHost(message.getRecipient().getHost())
+                    .senderHost(message.getSender())
+                    .recipientHost(NATIVE_HOST)
                     .build();
         }
     }
 
     @Transactional
-    public MessageOutDTO save(MessageInDTO messageInDTO, MultipartFile messageFile) throws FileSaveException,
-                                                                                           FileDownloadException {
+    public MessageOutDTO save(MessageInDTO messageInDTO, MultipartFile messageFile, String senderHost) throws
+                                                                                            FileSaveException,
+                                                                                            FileDownloadException {
         log.debug("Request to save Message: {}", messageInDTO);
 
         Message message = fromDTO(messageInDTO);
         message.setReceiveDate(new Date());
+        message.setSender(senderHost);
         StringBuilder filePath = new StringBuilder();
         String hash = "";
 
@@ -106,7 +111,8 @@ public class MessageService {
                 return toDTO(messageByHash);
             }
         } catch (NoSuchAlgorithmException | IOException | NullPointerException exception) {
-            log.error("Message file save error: " + exception);
+            log.error("Message file save error: ");
+            exception.printStackTrace();
             throw new FileSaveException("Error while saving file");
         }
     }
@@ -137,29 +143,21 @@ public class MessageService {
                 .collect(Collectors.toList());
     }
 
-    public List<MessageOutDTO> getAllMessagesBySender(long id) {
-        log.debug("Request to get all Messages with Sender id: " + id);
-        Node node = nodeRepository.getOne(id);
-        return node.getSentMessages()
+    public List<MessageOutDTO> getAllMessagesBySender(String senderHost) {
+        log.debug("Request to get all Messages with Sender host: " + senderHost);
+        return messageRepository.getAllBySender(senderHost)
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
 
-    public List<MessageOutDTO> getAllMessagesByRecipient(long id) {
-        log.debug("Request to get all Messages with Recipient id: " + id);
-        Node node = nodeRepository.getOne(id);
-        return node.getReceivedMessages()
-                .stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
-    private void startPropagation(InputStream fileStream) {
+    private void startPropagation(ByteArrayOutputStream fileStream) {
         Node nativeNode = nodeRepository.getNodeByNativeNodeIsTrue();
         for (Node node : nodeRepository.findAll()) {
             if (!node.isNativeNode()) {
-                new PropagationThread(nativeNode.getHost(), node.getHost(), fileStream).start();
+                new PropagationThread(nativeNode.getHost(),
+                                      node.getHost(),
+                                      new ByteArrayInputStream(fileStream.toByteArray())).start();
             }
         }
     }

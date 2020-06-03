@@ -5,8 +5,11 @@ import org.springframework.stereotype.Repository;
 import ua.edu.donntu.domain.Message;
 import ua.edu.donntu.domain.Node;
 
+import java.util.List;
+
 @Repository
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
     Message getByHash(String hash);
+    List<Message> getAllBySender(String senderHost);
 }

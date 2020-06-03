@@ -11,16 +11,22 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ua.edu.donntu.dto.MessageInDTO;
 import ua.edu.donntu.dto.MessageOutDTO;
+import ua.edu.donntu.service.MessageService;
 
 import java.io.InputStream;
+import java.net.ConnectException;
 import java.util.Date;
 
 @Getter
 @Setter
 @AllArgsConstructor
 public class PropagationThread extends Thread {
+
+    private final Logger log = LoggerFactory.getLogger(PropagationThread.class);
 
     private String senderHost;
     private String recipientHost;
@@ -34,8 +40,6 @@ public class PropagationThread extends Thread {
 
         MessageInDTO messageInDTO = MessageInDTO.builder()
                 .sendDate(new Date())
-                .senderHost(senderHost)
-                .recipientHost(recipientHost)
                 .build();
 
         HttpEntity multipart = MultipartEntityBuilder.create()
@@ -44,6 +48,10 @@ public class PropagationThread extends Thread {
                 .build();
 
         uploadFile.setEntity(multipart);
-        httpClient.execute(uploadFile);
+        try {
+            httpClient.execute(uploadFile);
+        } catch (ConnectException exception) {
+            log.error("Propagation thread error: " + exception);
+        }
     }
 }

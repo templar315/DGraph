@@ -5,7 +5,6 @@ import org.hibernate.annotations.ColumnDefault;
 
 import javax.persistence.*;
 import java.io.Serializable;
-import java.util.List;
 
 @Entity
 @Table(name = "node")
@@ -29,10 +28,4 @@ public class Node implements Serializable {
     @Column(name = "native_node", nullable = false)
     @ColumnDefault("false")
     private boolean nativeNode;
-
-    @OneToMany(mappedBy = "sender", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    private List<Message> sentMessages;
-
-    @OneToMany(mappedBy = "recipient", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    private List<Message> receivedMessages;
 }

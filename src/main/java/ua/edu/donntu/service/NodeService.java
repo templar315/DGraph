@@ -7,12 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
-import ua.edu.donntu.domain.Message;
 import ua.edu.donntu.domain.Node;
 import ua.edu.donntu.dto.NodeInDTO;
 import ua.edu.donntu.dto.NodeOutDTO;
 import ua.edu.donntu.repository.NodeRepository;
-import ua.edu.donntu.service.exceptions.EmptyNullableFieldException;
 import ua.edu.donntu.service.exceptions.ObjectUniquenessException;
 import ua.edu.donntu.service.exceptions.NodeDoesNotExistException;
 import ua.edu.donntu.service.exceptions.NodeAlreadyExistException;
@@ -22,7 +20,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,6 +31,10 @@ public class NodeService {
     private final Logger log = LoggerFactory.getLogger(NodeService.class);
 
     private final NodeRepository nodeRepository;
+
+    public static String NATIVE_HOST;
+
+    private static final String IP_CHECK_HOST = "http://checkip.amazonaws.com";
 
     private Node fromInDTO(NodeInDTO nodeInDTO) {
         if (nodeInDTO == null) {
@@ -53,20 +54,6 @@ public class NodeService {
                     .id(node.getId())
                     .host(node.getHost())
                     .nativeNode(node.isNativeNode())
-                    .sentMessages(node.getSentMessages() == null
-                            ? new ArrayList<>()
-                            : node
-                            .getSentMessages()
-                            .stream()
-                            .map(Message::getId)
-                            .collect(Collectors.toList()))
-                    .receivedMessages(node.getReceivedMessages() == null
-                            ? new ArrayList<>()
-                            : node
-                            .getReceivedMessages()
-                            .stream()
-                            .map(Message::getId)
-                            .collect(Collectors.toList()))
                     .build();
         }
     }
@@ -158,9 +145,12 @@ public class NodeService {
 
     private String getHost() {
         try {
-            URL nativeIp = new URL("http://checkip.amazonaws.com");
-            BufferedReader in = new BufferedReader(new InputStreamReader(nativeIp.openStream()));
-            return in.readLine();
+            if (NATIVE_HOST == null) {
+                URL nativeIp = new URL(IP_CHECK_HOST);
+                BufferedReader in = new BufferedReader(new InputStreamReader(nativeIp.openStream()));
+                NATIVE_HOST = in.readLine();
+            }
+            return NATIVE_HOST;
         } catch (IOException ioException) {
             log.error(ioException.getMessage());
         }

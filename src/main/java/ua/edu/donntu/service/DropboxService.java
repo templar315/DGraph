@@ -54,12 +54,12 @@ public class DropboxService {
         }
     }
 
-    public InputStream download(String dropboxPath) throws FileDownloadException {
+    public ByteArrayOutputStream download(String dropboxPath) throws FileDownloadException {
         log.debug("Request to download file from dropbox path: " + dropboxPath);
         try {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             getClient().files().downloadBuilder(dropboxPath).download(byteArrayOutputStream);
-            return new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+            return byteArrayOutputStream;
         } catch (DbxException | IOException exception) {
             log.error("Dropbox download error: " + exception);
             throw new FileDownloadException("Error while downloading file");

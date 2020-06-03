@@ -37,11 +37,6 @@ public class Message implements Serializable {
     @Column(name = "hash", nullable = false, unique = true)
     private String hash;
 
-    @ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
-    @JoinColumn(name = "sender")
-    private Node sender;
-
-    @ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
-    @JoinColumn(name = "recipient")
-    private Node recipient;
+    @Column(name = "sender", nullable = false)
+    private String sender;
 }
