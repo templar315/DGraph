@@ -16,7 +16,6 @@ import ua.edu.donntu.service.exceptions.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Context;
-import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -32,7 +31,9 @@ public class MessageController {
     public ResponseEntity<MessageOutDTO> save(@RequestPart(name = "message") @Validated MessageInDTO messageInDTO,
                                               @RequestPart(name = "file") MultipartFile file,
                                               @Context HttpServletRequest requestContext) throws FileSaveException,
-                                                                                                 FileDownloadException {
+                                                                                                 FileDownloadException,
+                                                                                                 MessageDigestException,
+                                                                                                 FileInputStreamException {
         log.debug("REST Request to save Message: {}", messageInDTO);
         MessageOutDTO message = messageService.save(messageInDTO, file, requestContext.getRemoteHost());
         if(message != null) return ResponseEntity.status(HttpStatus.CREATED).body(message);

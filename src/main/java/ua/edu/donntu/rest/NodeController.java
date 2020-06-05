@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import ua.edu.donntu.dto.NodeInDTO;
 import ua.edu.donntu.dto.NodeOutDTO;
 import ua.edu.donntu.service.NodeService;
-import ua.edu.donntu.service.exceptions.EmptyNullableFieldException;
 import ua.edu.donntu.service.exceptions.NodeAlreadyExistException;
 import ua.edu.donntu.service.exceptions.NodeDoesNotExistException;
 import ua.edu.donntu.service.exceptions.ObjectUniquenessException;

@@ -21,4 +21,8 @@ public class NodeInDTO implements Serializable {
     @NotEmpty(message = "Host field is empty")
     private String host;
 
+    @NotNull(message = "Port field is null")
+    @NotEmpty(message = "Port field is empty")
+    private String port;
+
 }

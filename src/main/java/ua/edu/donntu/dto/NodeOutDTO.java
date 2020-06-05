@@ -19,5 +19,7 @@ public class NodeOutDTO implements Serializable {
 
     private String host;
 
+    private String port;
+
     private boolean nativeNode;
 }

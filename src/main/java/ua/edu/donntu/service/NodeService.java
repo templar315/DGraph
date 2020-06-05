@@ -19,6 +19,8 @@ import javax.transaction.Transactional;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URL;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,7 +36,9 @@ public class NodeService {
 
     public static String NATIVE_HOST;
 
-    private static final String IP_CHECK_HOST = "http://checkip.amazonaws.com";
+    public static String NATIVE_PORT;
+
+    private static final String IP_CHECK_HOST = "checkip.amazonaws.com";
 
     private Node fromInDTO(NodeInDTO nodeInDTO) {
         if (nodeInDTO == null) {
@@ -42,6 +46,7 @@ public class NodeService {
         } else {
             return Node.builder()
                     .host(nodeInDTO.getHost())
+                    .port(nodeInDTO.getPort())
                     .build();
         }
     }
@@ -53,6 +58,7 @@ public class NodeService {
             return NodeOutDTO.builder()
                     .id(node.getId())
                     .host(node.getHost())
+                    .port(node.getPort())
                     .nativeNode(node.isNativeNode())
                     .build();
         }
@@ -129,11 +135,13 @@ public class NodeService {
     }
 
     @EventListener(ContextRefreshedEvent.class)
+    @Transactional
     public void initNativeNode() {
         log.debug("Request to init native Node");
         if (getNativeNode() == null) {
             nodeRepository.saveAndFlush(Node.builder()
                     .host(getHost())
+                    .port(getPort())
                     .nativeNode(true)
                     .build());
         }
@@ -146,14 +154,26 @@ public class NodeService {
     private String getHost() {
         try {
             if (NATIVE_HOST == null) {
-                URL nativeIp = new URL(IP_CHECK_HOST);
+                URL nativeIp = new URL("http://" + IP_CHECK_HOST);
                 BufferedReader in = new BufferedReader(new InputStreamReader(nativeIp.openStream()));
                 NATIVE_HOST = in.readLine();
             }
-            return NATIVE_HOST;
-        } catch (IOException ioException) {
-            log.error(ioException.getMessage());
+        } catch (IOException exception) {
+            log.error("Native host identification error: ", exception);
         }
-        return null;
+        return NATIVE_HOST;
+    }
+
+    private String getPort() {
+        try {
+            if (NATIVE_PORT == null) {
+                Socket socket = new Socket();
+                socket.connect(new InetSocketAddress(IP_CHECK_HOST, 80));
+                NATIVE_PORT = String.valueOf(socket.getPort());
+            }
+        } catch (IOException exception) {
+            log.error("Native port identification error: ", exception);
+        }
+        return NATIVE_PORT;
     }
 }

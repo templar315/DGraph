@@ -25,6 +25,9 @@ public class Node implements Serializable {
     @Column(name = "host", nullable = false, unique = true)
     private String host;
 
+    @Column(name = "port", nullable = false)
+    private String port;
+
     @Column(name = "native_node", nullable = false)
     @ColumnDefault("false")
     private boolean nativeNode;

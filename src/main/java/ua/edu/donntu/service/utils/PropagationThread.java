@@ -30,12 +30,13 @@ public class PropagationThread extends Thread {
 
     private String senderHost;
     private String recipientHost;
+    private String recipientPort;
     private InputStream fileStream;
 
     @SneakyThrows
     public void run() {
         CloseableHttpClient httpClient = HttpClients.createDefault();
-        HttpPost uploadFile = new HttpPost("http://" + recipientHost + "/messages");
+        HttpPost uploadFile = new HttpPost("http://" + recipientHost + ":" + recipientPort + "/messages");
         Gson gson = new Gson();
 
         MessageInDTO messageInDTO = MessageInDTO.builder()
@@ -51,7 +52,7 @@ public class PropagationThread extends Thread {
         try {
             httpClient.execute(uploadFile);
         } catch (ConnectException exception) {
-            log.error("Propagation thread error: " + exception);
+            log.error("Propagation thread error: ", exception);
         }
     }
 }

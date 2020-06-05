@@ -1,6 +1,5 @@
 package ua.edu.donntu.service;
 
-import com.dropbox.core.DbxException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,12 +16,10 @@ import ua.edu.donntu.service.exceptions.*;
 import ua.edu.donntu.service.utils.PropagationThread;
 
 import javax.transaction.Transactional;
+import javax.xml.crypto.dsig.DigestMethod;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -44,6 +41,8 @@ public class MessageService {
     private final NodeService nodeService;
 
     private final DropboxService dropboxService;
+
+    private static final String DIGEST = "SHA-256";
 
     protected Message fromDTO(MessageInDTO messageInDTO) {
         if (messageInDTO == null) {
@@ -74,47 +73,46 @@ public class MessageService {
 
     @Transactional
     public MessageOutDTO save(MessageInDTO messageInDTO, MultipartFile messageFile, String senderHost) throws
-                                                                                            FileSaveException,
-                                                                                            FileDownloadException {
+                                                                                                    FileSaveException,
+                                                                                                    FileDownloadException,
+                                                                                                    MessageDigestException,
+                                                                                                    FileInputStreamException {
         log.debug("Request to save Message: {}", messageInDTO);
 
         Message message = fromDTO(messageInDTO);
         message.setReceiveDate(new Date());
         message.setSender(senderHost);
+
         StringBuilder filePath = new StringBuilder();
-        String hash = "";
+        String name = messageFile.getOriginalFilename();
+        String hash = fileService.getHashByFile(messageFile, DIGEST);
 
-        try {
-            String name = messageFile.getOriginalFilename();
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            hash = fileService.getHash(messageFile.getInputStream(), digest);
-            Message messageByHash = messageRepository.getByHash(hash);
-            if (messageByHash == null) {
-                filePath.append("/")
-                        .append(nodeService.getNativeNode().getHost())
-                        .append("/")
-                        .append(hash)
-                        .append(name.substring(name.lastIndexOf(".")));
+        Message existMessage = messageRepository.getByHash(hash);
+
+        if (existMessage == null && name != null) {
+            filePath.append("/")
+                    .append(nodeService.getNativeNode().getHost())
+                    .append("/")
+                    .append(hash)
+                    .append(name.substring(name.lastIndexOf(".")));
+
+            try {
                 dropboxService.upload(messageFile.getInputStream(), filePath.toString());
-
-
-                message.setFilePath(filePath.toString());
-                message.setSaveDate(new Date());
-                message.setHash(hash);
-
-                Message savedMessage = messageRepository.saveAndFlush(message);
-                startPropagation(dropboxService.download(savedMessage.getFilePath()));
-
-                return toDTO(savedMessage);
-            } else {
-                startPropagation(dropboxService.download(messageByHash.getFilePath()));
-                return toDTO(messageByHash);
+            } catch (IOException exception) {
+                log.error("File input stream error: ", exception);
+                throw new FileInputStreamException("File input stream error");
             }
-        } catch (NoSuchAlgorithmException | IOException | NullPointerException exception) {
-            log.error("Message file save error: ");
-            exception.printStackTrace();
-            throw new FileSaveException("Error while saving file");
+
+            message.setFilePath(filePath.toString());
+            message.setSaveDate(new Date());
+            message.setHash(hash);
+
+            existMessage = messageRepository.saveAndFlush(message);
         }
+        if (existMessage != null) {
+            startPropagation(dropboxService.download(existMessage.getFilePath()));
+        }
+        return toDTO(existMessage);
     }
 
     @Transactional
@@ -157,6 +155,7 @@ public class MessageService {
             if (!node.isNativeNode()) {
                 new PropagationThread(nativeNode.getHost(),
                                       node.getHost(),
+                                      node.getPort(),
                                       new ByteArrayInputStream(fileStream.toByteArray())).start();
             }
         }
