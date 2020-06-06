@@ -102,8 +102,9 @@ public class NodeService {
 
         return toOutDTO(nodeRepository.saveAndFlush(
                 checkNode.toBuilder()
-                    .host(nodeInDTO.getHost())
-                    .build()));
+                        .host(nodeInDTO.getHost())
+                        .port(nodeInDTO.getPort())
+                        .build()));
     }
 
     @Transactional
@@ -169,7 +170,7 @@ public class NodeService {
             if (NATIVE_PORT == null) {
                 Socket socket = new Socket();
                 socket.connect(new InetSocketAddress(IP_CHECK_HOST, 80));
-                NATIVE_PORT = String.valueOf(socket.getPort());
+                NATIVE_PORT = String.valueOf(socket.getLocalPort());
             }
         } catch (IOException exception) {
             log.error("Native port identification error: ", exception);

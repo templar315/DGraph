@@ -1,11 +1,13 @@
 package ua.edu.donntu.service.utils;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
@@ -13,11 +15,9 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
 import ua.edu.donntu.dto.MessageInDTO;
-import ua.edu.donntu.dto.MessageOutDTO;
-import ua.edu.donntu.service.MessageService;
 
-import java.io.InputStream;
 import java.net.ConnectException;
 import java.util.Date;
 
@@ -31,26 +31,37 @@ public class PropagationThread extends Thread {
     private String senderHost;
     private String recipientHost;
     private String recipientPort;
-    private InputStream fileStream;
+    private MultipartFile file;
 
     @SneakyThrows
     public void run() {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         HttpPost uploadFile = new HttpPost("http://" + recipientHost + ":" + recipientPort + "/messages");
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder()
+                .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+                .create();
 
         MessageInDTO messageInDTO = MessageInDTO.builder()
                 .sendDate(new Date())
                 .build();
 
-        HttpEntity multipart = MultipartEntityBuilder.create()
-                .addTextBody("message", gson.toJson(messageInDTO), ContentType.APPLICATION_JSON)
-                .addBinaryBody("file", fileStream)
+        HttpEntity entity = MultipartEntityBuilder.create()
+                .addTextBody(
+                        "message",
+                        gson.toJson(messageInDTO),
+                        ContentType.APPLICATION_JSON)
+                .addBinaryBody(
+                        "file",
+                        file.getBytes(),
+                        ContentType.MULTIPART_FORM_DATA,
+                        file.getOriginalFilename())
                 .build();
 
-        uploadFile.setEntity(multipart);
+        uploadFile.setEntity(entity);
+
         try {
-            httpClient.execute(uploadFile);
+            HttpResponse response = httpClient.execute(uploadFile);
+            log.debug("Propagation thread response: " + response.toString());
         } catch (ConnectException exception) {
             log.error("Propagation thread error: ", exception);
         }

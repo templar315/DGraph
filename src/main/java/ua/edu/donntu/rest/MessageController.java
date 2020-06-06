@@ -16,6 +16,7 @@ import ua.edu.donntu.service.exceptions.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Context;
+import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -35,21 +36,24 @@ public class MessageController {
                                                                                                  MessageDigestException,
                                                                                                  FileInputStreamException {
         log.debug("REST Request to save Message: {}", messageInDTO);
-        MessageOutDTO message = messageService.save(messageInDTO, file, requestContext.getRemoteHost());
+        MessageOutDTO message = messageService.save(messageInDTO,
+                                                    file,
+                                                    requestContext.getRemoteHost(),
+                                                    new Date());
         if(message != null) return ResponseEntity.status(HttpStatus.CREATED).body(message);
         else return ResponseEntity.badRequest().build();
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity delete(@PathVariable long id) throws FileDeleteException {
-        log.debug("REST Request to delete Message with id" + id);
+        log.debug("REST Request to delete Message with id: " + id);
         if(messageService.delete(id)) return ResponseEntity.ok().build();
         else return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<MessageOutDTO> getOne(@PathVariable long id) {
-        log.debug("REST Request to get Message with id" + id);
+        log.debug("REST Request to get Message with id: " + id);
         MessageOutDTO message = messageService.getOne(id);
         if(message != null) return ResponseEntity.ok(message);
         else return ResponseEntity.notFound().build();

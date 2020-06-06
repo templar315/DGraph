@@ -26,7 +26,7 @@ public class FileService {
         log.debug("Request to generate {} hash of stream", digest);
         StringBuilder result = new StringBuilder();
         try (DigestInputStream dis = new DigestInputStream(inputStream, MessageDigest.getInstance(digest))) {
-            while (dis.read() != -1);
+            //while (dis.read() != -1);
             for (byte b : dis.getMessageDigest().digest()) {
                 result.append(String.format("%02x", b));
             }

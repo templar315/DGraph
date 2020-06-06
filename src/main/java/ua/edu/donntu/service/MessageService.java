@@ -16,9 +16,6 @@ import ua.edu.donntu.service.exceptions.*;
 import ua.edu.donntu.service.utils.PropagationThread;
 
 import javax.transaction.Transactional;
-import javax.xml.crypto.dsig.DigestMethod;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
@@ -45,34 +42,33 @@ public class MessageService {
     private static final String DIGEST = "SHA-256";
 
     protected Message fromDTO(MessageInDTO messageInDTO) {
-        if (messageInDTO == null) {
-            return null;
-        } else {
+        if (messageInDTO != null) {
             return Message.builder()
                     .sendDate(messageInDTO.getSendDate())
                     .build();
         }
+        return null;
     }
 
     protected MessageOutDTO toDTO(Message message) {
-        if (message == null) {
-            return null;
-        } else {
-
+        if (message != null) {
             return MessageOutDTO.builder()
                     .id(message.getId())
                     .sendDate(message.getSendDate())
                     .receiveDate(message.getReceiveDate())
                     .saveDate(message.getSaveDate())
+                    .transmissionTime(message.getTransmissionTime())
+                    .processingTime(message.getProcessingTime())
                     .hash(message.getHash())
                     .senderHost(message.getSender())
                     .recipientHost(NATIVE_HOST)
                     .build();
         }
+        return null;
     }
 
     @Transactional
-    public MessageOutDTO save(MessageInDTO messageInDTO, MultipartFile messageFile, String senderHost) throws
+    public MessageOutDTO save(MessageInDTO messageInDTO, MultipartFile messageFile, String senderHost, Date receiveDate) throws
                                                                                                     FileSaveException,
                                                                                                     FileDownloadException,
                                                                                                     MessageDigestException,
@@ -80,7 +76,7 @@ public class MessageService {
         log.debug("Request to save Message: {}", messageInDTO);
 
         Message message = fromDTO(messageInDTO);
-        message.setReceiveDate(new Date());
+        message.setReceiveDate(receiveDate);
         message.setSender(senderHost);
 
         StringBuilder filePath = new StringBuilder();
@@ -107,7 +103,7 @@ public class MessageService {
             message.setSaveDate(new Date());
             message.setHash(hash);
 
-            existMessage = messageRepository.saveAndFlush(message);
+            existMessage = messageRepository.saveAndFlush(calculateData(message));
         }
         if (existMessage != null) {
             startPropagation(dropboxService.download(existMessage.getFilePath()));
@@ -149,15 +145,27 @@ public class MessageService {
                 .collect(Collectors.toList());
     }
 
-    private void startPropagation(ByteArrayOutputStream fileStream) {
+    private void startPropagation(MultipartFile file) {
         Node nativeNode = nodeRepository.getNodeByNativeNodeIsTrue();
         for (Node node : nodeRepository.findAll()) {
             if (!node.isNativeNode()) {
                 new PropagationThread(nativeNode.getHost(),
                                       node.getHost(),
                                       node.getPort(),
-                                      new ByteArrayInputStream(fileStream.toByteArray())).start();
+                                      file).start();
             }
         }
+    }
+
+    private Message calculateData(Message message) {
+        if (message != null) {
+            if (message.getReceiveDate() != null && message.getSendDate() != null) {
+                message.setTransmissionTime(message.getReceiveDate().getTime() - message.getSendDate().getTime());
+            }
+            if (message.getSaveDate() != null && message.getReceiveDate() != null) {
+                message.setProcessingTime(message.getSaveDate().getTime() - message.getReceiveDate().getTime());
+            }
+        }
+        return message;
     }
 }

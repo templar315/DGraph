@@ -1,6 +1,7 @@
 package ua.edu.donntu.domain;
 
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -30,6 +31,12 @@ public class Message implements Serializable {
 
     @Column(name = "save_date", nullable = false)
     private Date saveDate;
+
+    @Column(name = "transmission_time", nullable = false)
+    private Long transmissionTime;
+
+    @Column(name = "processing_time", nullable = false)
+    private Long processingTime;
 
     @Column(name = "file_path", nullable = false)
     private String filePath;

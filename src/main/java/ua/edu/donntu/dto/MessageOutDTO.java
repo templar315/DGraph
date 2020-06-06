@@ -24,6 +24,10 @@ public class MessageOutDTO implements Serializable {
 
     private Date saveDate;
 
+    private Long transmissionTime;
+
+    private Long processingTime;
+
     private String hash;
 
     private String senderHost;
