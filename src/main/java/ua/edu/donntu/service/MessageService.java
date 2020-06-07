@@ -123,6 +123,14 @@ public class MessageService {
         return false;
     }
 
+    @Transactional
+    public boolean deleteAll() throws FileDeleteException {
+        log.debug("Request to delete all Messages");
+        dropboxService.delete("/" + nodeService.getNativeNode().getHost());
+        messageRepository.deleteAll();
+        return true;
+    }
+
     public MessageOutDTO getOne(long id) {
         log.debug("Request to get Message with id: " + id);
         return toDTO(messageRepository.getOne(id));

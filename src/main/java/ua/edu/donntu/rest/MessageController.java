@@ -51,6 +51,13 @@ public class MessageController {
         else return ResponseEntity.notFound().build();
     }
 
+    @DeleteMapping
+    public ResponseEntity deleteAll() throws FileDeleteException {
+        log.debug("REST Request to delete all Messages");
+        messageService.deleteAll();
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<MessageOutDTO> getOne(@PathVariable long id) {
         log.debug("REST Request to get Message with id: " + id);
