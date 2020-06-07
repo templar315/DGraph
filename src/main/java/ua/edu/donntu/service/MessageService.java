@@ -104,9 +104,7 @@ public class MessageService {
             message.setHash(hash);
 
             existMessage = messageRepository.saveAndFlush(calculateData(message));
-        }
-        if (existMessage != null) {
-            startPropagation(dropboxService.download(existMessage.getFilePath()));
+            startPropagation(dropboxService.download(existMessage.getFilePath()), existMessage.getSender());
         }
         return toDTO(existMessage);
     }
@@ -153,10 +151,10 @@ public class MessageService {
                 .collect(Collectors.toList());
     }
 
-    private void startPropagation(MultipartFile file) {
+    private void startPropagation(MultipartFile file, String senderHost) {
         Node nativeNode = nodeRepository.getNodeByNativeNodeIsTrue();
         for (Node node : nodeRepository.findAll()) {
-            if (!node.isNativeNode()) {
+            if (!node.isNativeNode() && !node.getHost().equals(senderHost)) {
                 new PropagationThread(nativeNode.getHost(),
                                       node.getHost(),
                                       node.getPort(),
