@@ -15,7 +15,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.multipart.MultipartFile;
 import ua.edu.donntu.dto.MessageInDTO;
 
 import java.net.ConnectException;
@@ -31,39 +30,55 @@ public class PropagationThread extends Thread {
     private String senderHost;
     private String recipientHost;
     private String recipientPort;
-    private MultipartFile file;
+    private String fileName;
+    private byte[] fileArray;
 
     @SneakyThrows
     public void run() {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-        HttpPost uploadFile = new HttpPost("http://" + recipientHost + ":" + recipientPort + "/messages");
-        Gson gson = new GsonBuilder()
-                .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
-                .create();
+        if (isDataValid()) {
+            CloseableHttpClient httpClient = HttpClients.createDefault();
+            HttpPost uploadFile = new HttpPost("http://" + recipientHost + ":" + recipientPort + "/messages");
+            Gson gson = new GsonBuilder()
+                    .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+                    .create();
 
-        MessageInDTO messageInDTO = MessageInDTO.builder()
-                .sendDate(new Date())
-                .build();
+            MessageInDTO messageInDTO = MessageInDTO.builder()
+                    .sendDate(new Date())
+                    .build();
 
-        HttpEntity entity = MultipartEntityBuilder.create()
-                .addTextBody(
-                        "message",
-                        gson.toJson(messageInDTO),
-                        ContentType.APPLICATION_JSON)
-                .addBinaryBody(
-                        "file",
-                        file.getBytes(),
-                        ContentType.MULTIPART_FORM_DATA,
-                        file.getOriginalFilename())
-                .build();
+            HttpEntity entity = MultipartEntityBuilder.create()
+                    .addTextBody(
+                            "message",
+                            gson.toJson(messageInDTO),
+                            ContentType.APPLICATION_JSON)
+                    .addBinaryBody(
+                            "file",
+                            fileArray,
+                            ContentType.MULTIPART_FORM_DATA,
+                            fileName)
+                    .build();
 
-        uploadFile.setEntity(entity);
+            uploadFile.setEntity(entity);
 
-        try {
-            HttpResponse response = httpClient.execute(uploadFile);
-            log.debug("Propagation thread response: " + response.toString());
-        } catch (ConnectException exception) {
-            log.error("Propagation thread error: ", exception);
+            try {
+                HttpResponse response = httpClient.execute(uploadFile);
+                log.debug("Propagation thread response: " + response.toString());
+            } catch (ConnectException exception) {
+                log.error("Propagation thread error: ", exception);
+            }
         }
+    }
+
+    private boolean isDataValid() {
+        return senderHost != null
+                && !senderHost.isEmpty()
+                && recipientHost != null
+                && !recipientHost.isEmpty()
+                && recipientPort != null
+                && !recipientPort.isEmpty()
+                && fileArray != null
+                && fileArray.length > 0
+                && fileName != null
+                && !fileName.isEmpty();
     }
 }

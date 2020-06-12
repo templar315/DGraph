@@ -35,10 +35,6 @@ public class MessageService {
 
     private final FileService fileService;
 
-    private final NodeService nodeService;
-
-    private final DropboxService dropboxService;
-
     private static final String DIGEST = "SHA-256";
 
     protected Message fromDTO(MessageInDTO messageInDTO) {
@@ -69,62 +65,65 @@ public class MessageService {
 
     @Transactional
     public MessageOutDTO save(MessageInDTO messageInDTO, MultipartFile messageFile, String senderHost, Date receiveDate) throws
-                                                                                                    FileSaveException,
-                                                                                                    FileDownloadException,
-                                                                                                    MessageDigestException,
-                                                                                                    FileInputStreamException {
+                                                                                                FileInputStreamException,
+                                                                                                MessageDigestException,
+                                                                                                FileSaveException {
         log.debug("Request to save Message: {}", messageInDTO);
 
         Message message = fromDTO(messageInDTO);
         message.setReceiveDate(receiveDate);
-        message.setSender(senderHost);
 
-        StringBuilder filePath = new StringBuilder();
-        String name = messageFile.getOriginalFilename();
-        String hash = fileService.getHashByFile(messageFile, DIGEST);
+        String name;
+        byte[] fileArray;
 
+        try {
+            fileArray = messageFile.getBytes();
+            name = messageFile.getOriginalFilename();
+        } catch (IOException exception) {
+            log.error("File bytes array is empty: ", exception);
+            throw new FileInputStreamException("File bytes array is empty");
+        }
+
+        String hash = fileService.getHash(fileArray, DIGEST);
         Message existMessage = messageRepository.getByHash(hash);
 
         if (existMessage == null && name != null) {
-            filePath.append("/")
-                    .append(nodeService.getNativeNode().getHost())
-                    .append("/")
-                    .append(hash)
-                    .append(name.substring(name.lastIndexOf(".")));
+            String filePath = "/"
+                    .concat(hash)
+                    .concat(name.substring(name.lastIndexOf(".")));
+            fileService.saveFile(filePath, fileArray);
 
-            try {
-                dropboxService.upload(messageFile.getInputStream(), filePath.toString());
-            } catch (IOException exception) {
-                log.error("File input stream error: ", exception);
-                throw new FileInputStreamException("File input stream error");
-            }
-
-            message.setFilePath(filePath.toString());
+            message.setFilePath(filePath);
             message.setSaveDate(new Date());
             message.setHash(hash);
+            message.setSender(senderHost);
 
             existMessage = messageRepository.saveAndFlush(calculateData(message));
-            startPropagation(dropboxService.download(existMessage.getFilePath()), existMessage.getSender());
+            startPropagation(
+                    messageFile.getOriginalFilename(),
+                    fileArray,
+                    existMessage.getSender());
         }
         return toDTO(existMessage);
     }
 
     @Transactional
-    public boolean delete(long id) throws FileDeleteException {
+    public boolean delete(long id) {
         log.debug("Request to delete Message with id: " + id);
         if (messageRepository.existsById(id)) {
             Message message = messageRepository.getOne(id);
-            dropboxService.delete(message.getFilePath());
-            messageRepository.deleteById(id);
-            return true;
+            if (fileService.deleteFile(message.getFilePath())) {
+                messageRepository.deleteById(id);
+                return true;
+            }
         }
         return false;
     }
 
     @Transactional
-    public boolean deleteAll() throws FileDeleteException {
+    public boolean deleteAll() {
         log.debug("Request to delete all Messages");
-        dropboxService.delete("/" + nodeService.getNativeNode().getHost());
+        fileService.deleteAllFiles();
         messageRepository.deleteAll();
         return true;
     }
@@ -151,19 +150,22 @@ public class MessageService {
                 .collect(Collectors.toList());
     }
 
-    private void startPropagation(MultipartFile file, String senderHost) {
+    private void startPropagation(String fileName, byte[] fileArray, String senderHost) {
+        log.debug("Request to start propagation file: " + fileName);
         Node nativeNode = nodeRepository.getNodeByNativeNodeIsTrue();
         for (Node node : nodeRepository.findAll()) {
             if (!node.isNativeNode() && !node.getHost().equals(senderHost)) {
                 new PropagationThread(nativeNode.getHost(),
                                       node.getHost(),
                                       node.getPort(),
-                                      file).start();
+                                      fileName,
+                                      fileArray).start();
             }
         }
     }
 
     private Message calculateData(Message message) {
+        log.debug("Request to calculate processing and transmission time for message: " + message);
         if (message != null) {
             if (message.getReceiveDate() != null && message.getSendDate() != null) {
                 message.setTransmissionTime(message.getReceiveDate().getTime() - message.getSendDate().getTime());

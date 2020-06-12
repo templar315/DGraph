@@ -1,4 +1,5 @@
 FROM maven:3.6.3-jdk-8
+RUN mkdir /var/lib/dgraph
 COPY . /app
 WORKDIR /app
 RUN mvn -B package
