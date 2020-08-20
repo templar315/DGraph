@@ -2,7 +2,6 @@ package ua.edu.donntu.service;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.api.support.membermodification.MemberMatcher;
@@ -30,21 +29,21 @@ public class NodeServiceTest {
     private final NodeRepository nodeRepository = PowerMockito.mock(NodeRepository.class);
     private final NodeService nodeService = PowerMockito.spy(new NodeService(nodeRepository));
 
-    NodeInDTO nodeIn = NodeInDTO.builder()
+    private final NodeInDTO nodeIn = NodeInDTO.builder()
             .host("127.125.14.22")
             .port("8080")
             .build();
-    NodeInDTO nodeIn2 = NodeInDTO.builder()
+    private final NodeInDTO nodeIn2 = NodeInDTO.builder()
             .host("127.125.14.55")
             .port("8080")
             .build();
-    Node nodeReturn = Node.builder()
+    private final Node nodeReturn = Node.builder()
             .id(3L)
             .host("127.125.14.22")
             .port("8080")
             .nativeNode(true)
             .build();
-    Node nodeReturn2 = Node.builder()
+    private final Node nodeReturn2 = Node.builder()
             .id(4L)
             .host("127.125.14.55")
             .port("8080")

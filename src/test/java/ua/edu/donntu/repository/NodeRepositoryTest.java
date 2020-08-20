@@ -2,7 +2,6 @@ package ua.edu.donntu.repository;
 
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import ua.edu.donntu.BaseDomainTest;
 import ua.edu.donntu.domain.Node;
 
 import java.util.ArrayList;

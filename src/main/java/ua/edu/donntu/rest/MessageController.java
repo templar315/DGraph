@@ -32,7 +32,6 @@ public class MessageController {
     public ResponseEntity<MessageOutDTO> save(@RequestPart(name = "message") @Validated MessageInDTO messageInDTO,
                                               @RequestPart(name = "file") MultipartFile file,
                                               @Context HttpServletRequest requestContext) throws FileSaveException,
-                                                                                                 FileDownloadException,
                                                                                                  MessageDigestException,
                                                                                                  FileInputStreamException {
         log.debug("REST Request to save Message: {}", messageInDTO);
@@ -45,14 +44,14 @@ public class MessageController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity delete(@PathVariable long id) throws FileDeleteException {
+    public ResponseEntity delete(@PathVariable long id) {
         log.debug("REST Request to delete Message with id: " + id);
         if(messageService.delete(id)) return ResponseEntity.ok().build();
         else return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping
-    public ResponseEntity deleteAll() throws FileDeleteException {
+    public ResponseEntity deleteAll() {
         log.debug("REST Request to delete all Messages");
         messageService.deleteAll();
         return ResponseEntity.ok().build();

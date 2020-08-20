@@ -1,10 +1,6 @@
 package ua.edu.donntu.service;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -18,18 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 import ua.edu.donntu.domain.Message;
 import ua.edu.donntu.domain.Node;
 import ua.edu.donntu.dto.MessageInDTO;
-import ua.edu.donntu.dto.MessageOutDTO;
-import ua.edu.donntu.dto.NodeInDTO;
 import ua.edu.donntu.repository.MessageRepository;
 import ua.edu.donntu.repository.NodeRepository;
 import ua.edu.donntu.service.exceptions.*;
 import ua.edu.donntu.service.utils.PropagationThread;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.net.Socket;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -49,13 +38,14 @@ public class MessageServiceTest {
     private final MessageRepository messageRepository = PowerMockito.mock(MessageRepository.class);
     private final NodeRepository nodeRepository = PowerMockito.mock(NodeRepository.class);
     private final FileService fileService = PowerMockito.mock(FileService.class);
+    private final PropagationThread propagationThread = PowerMockito.mock(PropagationThread.class);
     private final MessageService messageService = PowerMockito.spy(
             new MessageService(nodeRepository, messageRepository, fileService));
 
-    MessageInDTO messageIn = MessageInDTO.builder()
+    private final MessageInDTO messageIn = MessageInDTO.builder()
             .sendDate(new Date())
             .build();
-    Message messageOut = Message.builder()
+    private final Message messageOut = Message.builder()
             .id(1L)
             .sendDate(new Date())
             .receiveDate(new Date())
@@ -66,7 +56,7 @@ public class MessageServiceTest {
             .hash("4967d20a6b5d124f56edce5666df77c6977df075595e491b6748e390e0abd0fe")
             .sender("127.125.14.20")
             .build();
-    Message messageOut2 = Message.builder()
+    private final Message messageOut2 = Message.builder()
             .sendDate(new Date())
             .receiveDate(new Date())
             .saveDate(new Date())
@@ -76,24 +66,24 @@ public class MessageServiceTest {
             .hash("707b33aa868149d6f9763b2bb2114e48158ebe93c0185945c27cf9df16cf2754")
             .sender("127.125.14.32")
             .build();
-    MultipartFile multipartFile = new MockMultipartFile(
+    private final MultipartFile multipartFile = new MockMultipartFile(
             "newFile",
             "newFile.txt",
             String.valueOf(ContentType.MULTIPART_FORM_DATA),
             "file".getBytes());
-    Node nodeReturn = Node.builder()
+    private final Node nodeReturn = Node.builder()
             .id(3L)
             .host("127.125.14.22")
             .port("8080")
             .nativeNode(true)
             .build();
-    Node nodeReturn2 = Node.builder()
+    private final Node nodeReturn2 = Node.builder()
             .id(4L)
             .host("127.125.14.55")
             .port("8080")
             .nativeNode(false)
             .build();
-    Node nodeReturn3 = Node.builder()
+    private final Node nodeReturn3 = Node.builder()
             .id(5L)
             .host("185.156.14.78")
             .port("8080")
@@ -167,23 +157,32 @@ public class MessageServiceTest {
         List<Node> nodes = new ArrayList<>(Arrays.asList(nodeReturn, nodeReturn2, nodeReturn3));
         PowerMockito.when(nodeRepository.getNodeByNativeNodeIsTrue()).thenReturn(nodeReturn);
         PowerMockito.when(nodeRepository.findAll()).thenReturn(nodes);
+        PowerMockito.whenNew(PropagationThread.class).withAnyArguments().thenReturn(propagationThread);
         Whitebox.invokeMethod(
                 messageService,
                 "startPropagation",
                 multipartFile.getOriginalFilename(),
                 multipartFile.getBytes(),
                 "127.125.14.55");
-        /*PowerMockito.verifyNew(PropagationThread.class).withArguments(
+        PowerMockito.verifyNew(PropagationThread.class).withArguments(
                 "127.125.14.22",
                 "185.156.14.78",
                 "8080",
                 multipartFile.getOriginalFilename(),
-                multipartFile.getBytes());*/
-        PowerMockito.verifyNew(PropagationThread.class).withArguments(
-                Mockito.anyString(),
-                Mockito.anyString(),
-                Mockito.anyString(),
-                Mockito.anyString(),
-                byte[].class);
+                multipartFile.getBytes());
+    }
+
+    @Test
+    public void calculateData() throws Exception {
+        messageOut.setSendDate(new Date(0));
+        messageOut.setReceiveDate(new Date(100));
+        messageOut.setSaveDate(new Date(112));
+        messageOut.setProcessingTime(0L);
+        messageOut.setTransmissionTime(0L);
+        Message message = Whitebox.invokeMethod(messageService, "calculateData", messageOut);
+        assertThat(message.getTransmissionTime()).isEqualTo(100);
+        assertThat(message.getProcessingTime()).isEqualTo(12);
+        message = Whitebox.invokeMethod(messageService, "calculateData", null);
+        assertThat(message).isNull();
     }
 }

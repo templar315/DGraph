@@ -1,4 +1,4 @@
-package ua.edu.donntu;
+package ua.edu.donntu.repository;
 
 import org.junit.Before;
 import org.junit.runner.RunWith;
