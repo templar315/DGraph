@@ -155,11 +155,7 @@ public class MessageService {
         Node nativeNode = nodeRepository.getNodeByNativeNodeIsTrue();
         for (Node node : nodeRepository.findAll()) {
             if (!node.isNativeNode() && !node.getHost().equals(senderHost)) {
-                new PropagationThread(nativeNode.getHost(),
-                                      node.getHost(),
-                                      node.getPort(),
-                                      fileName,
-                                      fileArray).start();
+                new PropagationThread(nativeNode.getHost(), node.getHost(), node.getPort(), fileName, fileArray).start();
             }
         }
     }

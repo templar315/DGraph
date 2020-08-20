@@ -6,8 +6,6 @@ services:
     build: .
     restart: always
     environment:
-      DROPBOX_FOLDER: ${DROPBOX_FOLDER}
-      DROPBOX_API_KEY: ${DROPBOX_API_KEY}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}

@@ -137,15 +137,16 @@ public class NodeService {
 
     @EventListener(ContextRefreshedEvent.class)
     @Transactional
-    public void initNativeNode() {
+    public Node initNativeNode() {
         log.debug("Request to init native Node");
         if (getNativeNode() == null) {
-            nodeRepository.saveAndFlush(Node.builder()
+            return nodeRepository.saveAndFlush(Node.builder()
                     .host(getHost())
                     .port(getPort())
                     .nativeNode(true)
                     .build());
         }
+        return null;
     }
 
     private boolean isNativeNode(Node node) {

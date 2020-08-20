@@ -1,7 +1,6 @@
 package ua.edu.donntu.domain;
 
 import lombok.*;
-import org.hibernate.annotations.ColumnDefault;
 
 import javax.persistence.*;
 import java.io.Serializable;
