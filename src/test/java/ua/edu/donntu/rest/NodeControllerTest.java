@@ -14,9 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import ua.edu.donntu.dto.NodeInDTO;
 import ua.edu.donntu.dto.NodeOutDTO;
-import ua.edu.donntu.service.FileService;
-import ua.edu.donntu.service.MessageService;
-import ua.edu.donntu.service.NodeService;
+import ua.edu.donntu.service.*;
 
 import java.util.Arrays;
 
@@ -39,6 +37,12 @@ public class NodeControllerTest {
 
     @MockBean
     private NodeService nodeService;
+
+    @MockBean
+    private MeasurementService measurementService;
+
+    @MockBean
+    private MeasurementUnitService measurementUnitService;
 
     @Autowired
     private MockMvc mvc;
@@ -124,16 +128,5 @@ public class NodeControllerTest {
         mvc.perform(MockMvcRequestBuilders.get(NODES))
                 .andExpect(status().isOk())
                 .andExpect(content().string(objectMapper.writeValueAsString(Arrays.asList(nodeOutDTO, nodeOutDTO2))));
-    }
-
-    @Test
-    public void getNative() throws Exception {
-        Mockito.when(nodeService.getNativeNode()).thenReturn(nodeOutDTO);
-        mvc.perform(MockMvcRequestBuilders.get(NODES + "/native"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(objectMapper.writeValueAsString(nodeOutDTO)));
-        Mockito.when(nodeService.getNativeNode()).thenReturn(null);
-        mvc.perform(MockMvcRequestBuilders.get(NODES + "/native"))
-                .andExpect(status().isNotFound());
     }
 }

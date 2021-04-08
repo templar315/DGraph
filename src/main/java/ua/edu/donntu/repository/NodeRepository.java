@@ -8,5 +8,4 @@ import ua.edu.donntu.domain.Node;
 public interface NodeRepository extends JpaRepository<Node, Long> {
 
     Node getByHost(String host);
-    Node getNodeByNativeNodeIsTrue();
 }

@@ -6,24 +6,19 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.util.Date;
 
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class MessageOutDTO implements Serializable {
+public class MeasurementUnitOutDTO implements Serializable {
 
-    private static final long serialVersionUID = -4961377427252156715L;
+    private static final long serialVersionUID = -4381354977628224932L;
 
     private long id;
-    private Date sendDate;
-    private Date receiveDate;
-    private Date saveDate;
     private long transmissionTime;
     private long processingTime;
-    private int size;
     private String hash;
-    private String senderHost;
-    private String recipientHost;
+    private long measurement;
+    private long node;
 }

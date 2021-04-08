@@ -16,10 +16,7 @@ public class NodeOutDTO implements Serializable {
     private static final long serialVersionUID = -4961377427252156715L;
 
     private long id;
-
     private String host;
-
     private String port;
-
     private boolean nativeNode;
 }

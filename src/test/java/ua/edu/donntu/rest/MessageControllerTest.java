@@ -17,9 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import ua.edu.donntu.dto.MessageInDTO;
 import ua.edu.donntu.dto.MessageOutDTO;
 import ua.edu.donntu.rest.utils.TestUtil;
-import ua.edu.donntu.service.FileService;
-import ua.edu.donntu.service.MessageService;
-import ua.edu.donntu.service.NodeService;
+import ua.edu.donntu.service.*;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -43,6 +41,12 @@ public class MessageControllerTest {
     @MockBean
     private NodeService nodeService;
 
+    @MockBean
+    private MeasurementService measurementService;
+
+    @MockBean
+    private MeasurementUnitService measurementUnitService;
+
     @Autowired
     private MockMvc mvc;
 
@@ -63,6 +67,7 @@ public class MessageControllerTest {
             .saveDate(saveDate)
             .transmissionTime(receiveDate.getTime()-sendDate.getTime())
             .processingTime(saveDate.getTime()-receiveDate.getTime())
+            .size(1024 * 1024)
             .hash("4967d20a6b5d124f56edce5666df77c6977df075595e491b6748e390e0abd0fe")
             .senderHost("127.125.14.20")
             .recipientHost("127.125.25.20")
@@ -73,6 +78,7 @@ public class MessageControllerTest {
             .saveDate(saveDate)
             .transmissionTime(receiveDate.getTime()-sendDate.getTime())
             .processingTime(saveDate.getTime()-receiveDate.getTime())
+            .size(1024 * 1024)
             .hash("707b33aa868149d6f9763b2bb2114e48158ebe93c0185945c27cf9df16cf2754")
             .senderHost("127.125.14.32")
             .recipientHost("127.125.25.20")

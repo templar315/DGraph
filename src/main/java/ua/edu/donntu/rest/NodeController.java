@@ -1,8 +1,7 @@
 package ua.edu.donntu.rest;
 
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,12 +16,11 @@ import ua.edu.donntu.service.exceptions.ObjectUniquenessException;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/nodes")
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class NodeController {
-
-    private final Logger log = LoggerFactory.getLogger(MessageController.class);
 
     private final NodeService nodeService;
 
@@ -65,13 +63,5 @@ public class NodeController {
     public ResponseEntity<List<NodeOutDTO>> getAll() {
         log.debug("REST Request to get all Nodes");
         return ResponseEntity.ok(nodeService.getAll());
-    }
-
-    @GetMapping("/native")
-    public ResponseEntity<NodeOutDTO> getNative() {
-        log.debug("REST Request to get Node data");
-        NodeOutDTO node = nodeService.getNativeNode();
-        if(node != null) return ResponseEntity.ok(node);
-        else return ResponseEntity.notFound().build();
     }
 }

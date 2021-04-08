@@ -1,8 +1,7 @@
 package ua.edu.donntu.service;
 
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,13 +20,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static ua.edu.donntu.service.NodeService.NATIVE_HOST;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class MessageService {
-
-    private final Logger log = LoggerFactory.getLogger(MessageService.class);
 
     private final NodeRepository nodeRepository;
 
@@ -38,29 +34,29 @@ public class MessageService {
     private static final String DIGEST = "SHA-256";
 
     protected Message fromDTO(MessageInDTO messageInDTO) {
-        if (messageInDTO != null) {
-            return Message.builder()
-                    .sendDate(messageInDTO.getSendDate())
-                    .build();
+        if (messageInDTO == null) {
+            return null;
         }
-        return null;
+        return Message.builder()
+                .sendDate(messageInDTO.getSendDate())
+                .build();
     }
 
     protected MessageOutDTO toDTO(Message message) {
-        if (message != null) {
-            return MessageOutDTO.builder()
-                    .id(message.getId())
-                    .sendDate(message.getSendDate())
-                    .receiveDate(message.getReceiveDate())
-                    .saveDate(message.getSaveDate())
-                    .transmissionTime(message.getTransmissionTime())
-                    .processingTime(message.getProcessingTime())
-                    .hash(message.getHash())
-                    .senderHost(message.getSender())
-                    .recipientHost(NATIVE_HOST)
-                    .build();
+        if (message == null) {
+            return null;
         }
-        return null;
+        return MessageOutDTO.builder()
+                .id(message.getId())
+                .sendDate(message.getSendDate())
+                .receiveDate(message.getReceiveDate())
+                .saveDate(message.getSaveDate())
+                .transmissionTime(message.getTransmissionTime())
+                .processingTime(message.getProcessingTime())
+                .size(message.getSize())
+                .hash(message.getHash())
+                .senderHost(message.getSender())
+                .build();
     }
 
     @Transactional
@@ -94,15 +90,13 @@ public class MessageService {
             fileService.saveFile(filePath, fileArray);
 
             message.setFilePath(filePath);
+            message.setSize(fileArray.length);
             message.setSaveDate(new Date());
             message.setHash(hash);
             message.setSender(senderHost);
 
             existMessage = messageRepository.saveAndFlush(calculateData(message));
-            startPropagation(
-                    messageFile.getOriginalFilename(),
-                    fileArray,
-                    existMessage.getSender());
+            startPropagation(messageFile.getOriginalFilename(), fileArray);
         }
         return toDTO(existMessage);
     }
@@ -150,13 +144,10 @@ public class MessageService {
                 .collect(Collectors.toList());
     }
 
-    private void startPropagation(String fileName, byte[] fileArray, String senderHost) {
+    private void startPropagation(String fileName, byte[] fileArray) {
         log.debug("Request to start propagation file: " + fileName);
-        Node nativeNode = nodeRepository.getNodeByNativeNodeIsTrue();
         for (Node node : nodeRepository.findAll()) {
-            if (!node.isNativeNode() && !node.getHost().equals(senderHost)) {
-                new PropagationThread(nativeNode.getHost(), node.getHost(), node.getPort(), fileName, fileArray).start();
-            }
+            new PropagationThread(node.getHost(), node.getPort(), fileName, fileArray).call();
         }
     }
 

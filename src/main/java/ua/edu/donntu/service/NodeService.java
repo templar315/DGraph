@@ -1,11 +1,8 @@
 package ua.edu.donntu.service;
 
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import ua.edu.donntu.domain.Node;
 import ua.edu.donntu.dto.NodeInDTO;
@@ -16,52 +13,35 @@ import ua.edu.donntu.service.exceptions.NodeDoesNotExistException;
 import ua.edu.donntu.service.exceptions.NodeAlreadyExistException;
 
 import javax.transaction.Transactional;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.URL;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
+@Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class NodeService {
 
-    private final Logger log = LoggerFactory.getLogger(NodeService.class);
-
     private final NodeRepository nodeRepository;
-
-    public static String NATIVE_HOST;
-
-    public static String NATIVE_PORT;
-
-    private static final String IP_CHECK_HOST = "checkip.amazonaws.com";
 
     private Node fromInDTO(NodeInDTO nodeInDTO) {
         if (nodeInDTO == null) {
             return null;
-        } else {
-            return Node.builder()
-                    .host(nodeInDTO.getHost())
-                    .port(nodeInDTO.getPort())
-                    .build();
         }
+        return Node.builder()
+                .host(nodeInDTO.getHost())
+                .port(nodeInDTO.getPort())
+                .build();
     }
 
     private NodeOutDTO toOutDTO(Node node) {
         if (node == null) {
             return null;
-        } else {
-            return NodeOutDTO.builder()
-                    .id(node.getId())
-                    .host(node.getHost())
-                    .port(node.getPort())
-                    .nativeNode(node.isNativeNode())
-                    .build();
         }
+        return NodeOutDTO.builder()
+                .id(node.getId())
+                .host(node.getHost())
+                .port(node.getPort())
+                .build();
     }
 
     @Transactional
@@ -73,26 +53,19 @@ public class NodeService {
             throw new NodeAlreadyExistException("Node already exist");
         }
 
-        Node node = fromInDTO(nodeInDTO);
-
-        if (isNativeNode(node)) {
-            node.setNativeNode(nodeRepository.getNodeByNativeNodeIsTrue() == null);
-        }
-
-        return toOutDTO(nodeRepository.saveAndFlush(node));
+        return toOutDTO(nodeRepository.saveAndFlush(fromInDTO(nodeInDTO)));
     }
 
     @Transactional
     public NodeOutDTO update(Long id, NodeInDTO nodeInDTO) throws NodeDoesNotExistException, ObjectUniquenessException {
         log.debug("Request to update Node: {}", nodeInDTO);
 
-        Node checkNode = nodeRepository.getOne(id);
-
-        if (checkNode == null) {
+        if (!nodeRepository.existsById(id)) {
             log.error("Node does not exist");
             throw new NodeDoesNotExistException("Node does not exist");
         }
 
+        Node checkNode = nodeRepository.getOne(id);
         Node checkByHostNode = nodeRepository.getByHost(nodeInDTO.getHost());
 
         if ((checkByHostNode != null && checkNode != checkByHostNode)) {
@@ -111,7 +84,9 @@ public class NodeService {
     public boolean delete(long id) {
         log.debug("Request to delete Node with id: " + id);
         if (nodeRepository.existsById(id)) {
-            nodeRepository.deleteById(id);
+            Node node = nodeRepository.getOne(id);
+            node.getMeasurementUnits().clear();
+            nodeRepository.delete(node);
         }
         return true;
     }
@@ -128,54 +103,5 @@ public class NodeService {
                 .stream()
                 .map(this::toOutDTO)
                 .collect(Collectors.toList());
-    }
-
-    public NodeOutDTO getNativeNode() {
-        log.debug("Request to get server Node data");
-        return toOutDTO(nodeRepository.getNodeByNativeNodeIsTrue());
-    }
-
-    @EventListener(ContextRefreshedEvent.class)
-    @Transactional
-    public Node initNativeNode() {
-        log.debug("Request to init native Node");
-        if (getNativeNode() == null) {
-            return nodeRepository.saveAndFlush(Node.builder()
-                    .host(getHost())
-                    .port(getPort())
-                    .nativeNode(true)
-                    .build());
-        }
-        return null;
-    }
-
-    private boolean isNativeNode(Node node) {
-        return node.getHost().equals(getHost());
-    }
-
-    private String getHost() {
-        try {
-            if (NATIVE_HOST == null) {
-                URL nativeIp = new URL("http://" + IP_CHECK_HOST);
-                BufferedReader in = new BufferedReader(new InputStreamReader(nativeIp.openStream()));
-                NATIVE_HOST = in.readLine();
-            }
-        } catch (IOException exception) {
-            log.error("Native host identification error: ", exception);
-        }
-        return NATIVE_HOST;
-    }
-
-    private String getPort() {
-        try {
-            if (NATIVE_PORT == null) {
-                Socket socket = new Socket();
-                socket.connect(new InetSocketAddress(IP_CHECK_HOST, 80));
-                NATIVE_PORT = String.valueOf(socket.getLocalPort());
-            }
-        } catch (IOException exception) {
-            log.error("Native port identification error: ", exception);
-        }
-        return NATIVE_PORT;
     }
 }

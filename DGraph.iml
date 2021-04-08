@@ -113,7 +113,7 @@
     <orderEntry type="library" scope="RUNTIME" name="Maven: com.github.ben-manes.caffeine:caffeine:2.6.2" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.osgi:org.osgi.core:4.3.1" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.osgi:org.osgi.enterprise:4.2.0" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: com.h2database:h2:1.4.200" level="project" />
+    <orderEntry type="library" name="Maven: com.h2database:h2:1.4.200" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.powermock:powermock-module-junit4:2.0.7" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.powermock:powermock-module-junit4-common:2.0.7" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.powermock:powermock-reflect:2.0.7" level="project" />

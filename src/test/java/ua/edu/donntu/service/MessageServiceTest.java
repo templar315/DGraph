@@ -75,19 +75,16 @@ public class MessageServiceTest {
             .id(3L)
             .host("127.125.14.22")
             .port("8080")
-            .nativeNode(true)
             .build();
     private final Node nodeReturn2 = Node.builder()
             .id(4L)
             .host("127.125.14.55")
             .port("8080")
-            .nativeNode(false)
             .build();
     private final Node nodeReturn3 = Node.builder()
             .id(5L)
             .host("185.156.14.78")
             .port("8080")
-            .nativeNode(false)
             .build();
 
     @Test
@@ -155,17 +152,14 @@ public class MessageServiceTest {
     @Test
     public void startPropagation() throws Exception {
         List<Node> nodes = new ArrayList<>(Arrays.asList(nodeReturn, nodeReturn2, nodeReturn3));
-        PowerMockito.when(nodeRepository.getNodeByNativeNodeIsTrue()).thenReturn(nodeReturn);
         PowerMockito.when(nodeRepository.findAll()).thenReturn(nodes);
         PowerMockito.whenNew(PropagationThread.class).withAnyArguments().thenReturn(propagationThread);
         Whitebox.invokeMethod(
                 messageService,
                 "startPropagation",
                 multipartFile.getOriginalFilename(),
-                multipartFile.getBytes(),
-                "127.125.14.55");
+                multipartFile.getBytes());
         PowerMockito.verifyNew(PropagationThread.class).withArguments(
-                "127.125.14.22",
                 "185.156.14.78",
                 "8080",
                 multipartFile.getOriginalFilename(),

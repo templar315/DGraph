@@ -2,6 +2,8 @@ package ua.edu.donntu.repository;
 
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+import ua.edu.donntu.domain.MeasurementUnit;
 import ua.edu.donntu.domain.Node;
 
 import java.util.ArrayList;
@@ -14,12 +16,14 @@ public class NodeRepositoryTest extends BaseDomainTest {
     @Autowired
     private NodeRepository nodeRepository;
 
+    @Autowired
+    private MeasurementUnitRepository measurementUnitRepository;
+
     @Test
     public void add() {
         nodeRepository.saveAndFlush(Node.builder()
                 .host("185.150.21.47")
                 .port("8080")
-                .nativeNode(true)
                 .build());
         assertThat(nodeRepository.getByHost("185.150.21.47")).isNotNull();
         assertThat(nodeRepository.count()).isEqualTo(3);
@@ -38,22 +42,33 @@ public class NodeRepositoryTest extends BaseDomainTest {
     @Test
     public void delete() {
         assertThat(nodeRepository.count()).isEqualTo(2);
-        nodeRepository.delete(nodeRepository.getByHost("127.125.14.20"));
+        assertThat(measurementUnitRepository.count()).isEqualTo(4);
+        Node node = nodeRepository.getByHost("127.125.14.20");
+        node.getMeasurementUnits().clear();
+        nodeRepository.delete(node);
         assertThat(nodeRepository.count()).isEqualTo(1);
+        assertThat(measurementUnitRepository.count()).isEqualTo(2);
     }
 
     @Test
     public void deleteById() {
         assertThat(nodeRepository.count()).isEqualTo(2);
-        nodeRepository.deleteById(nodeRepository.getByHost("127.125.14.20").getId());
+        assertThat(measurementUnitRepository.count()).isEqualTo(4);
+        Node node = nodeRepository.getByHost("127.125.14.20");
+        node.getMeasurementUnits().clear();
+        nodeRepository.deleteById(node.getId());
         assertThat(nodeRepository.count()).isEqualTo(1);
+        assertThat(measurementUnitRepository.count()).isEqualTo(2);
     }
 
     @Test
     public void deleteAll() {
         assertThat(nodeRepository.count()).isEqualTo(2);
+        assertThat(measurementUnitRepository.count()).isEqualTo(4);
+        nodeRepository.findAll().forEach(node -> node.getMeasurementUnits().clear());
         nodeRepository.deleteAll();
         assertThat(nodeRepository.count()).isEqualTo(0);
+        assertThat(measurementUnitRepository.count()).isEqualTo(0);
     }
 
     @Test
@@ -63,12 +78,10 @@ public class NodeRepositoryTest extends BaseDomainTest {
         nodes.add(Node.builder()
                 .host("185.150.21.47")
                 .port("8080")
-                .nativeNode(true)
                 .build());
         nodes.add(Node.builder()
                 .host("185.150.21.50")
                 .port("8080")
-                .nativeNode(true)
                 .build());
         nodeRepository.saveAll(nodes);
         assertThat(nodeRepository.count()).isEqualTo(4);
@@ -104,7 +117,7 @@ public class NodeRepositoryTest extends BaseDomainTest {
     @Test
     public void getOne() {
         assertThat(nodeRepository.getOne(
-                nodeRepository.getNodeByNativeNodeIsTrue().getId())
+                nodeRepository.getByHost("193.125.15.20").getId())
                 .getHost())
                 .isEqualTo("193.125.15.20");
     }
@@ -113,17 +126,7 @@ public class NodeRepositoryTest extends BaseDomainTest {
     public void getByHost() {
         Node node = nodeRepository.getByHost("193.125.15.20");
         assertThat(node).isNotNull();
-        assertThat(node.isNativeNode()).isTrue();
         node = nodeRepository.getByHost("193.125.15.35");
         assertThat(node).isNull();
-    }
-
-    @Test
-    public void getNativeNode() {
-        Node node = nodeRepository.getNodeByNativeNodeIsTrue();
-        assertThat(node).isNotNull();
-        assertThat(node.isNativeNode()).isTrue();
-        nodeRepository.delete(nodeRepository.getByHost("193.125.15.20"));
-        assertThat(nodeRepository.getNodeByNativeNodeIsTrue()).isNull();
     }
 }

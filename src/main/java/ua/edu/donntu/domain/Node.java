@@ -1,10 +1,13 @@
 package ua.edu.donntu.domain;
 
 import lombok.*;
+import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.ColumnDefault;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "node")
@@ -28,7 +31,6 @@ public class Node implements Serializable {
     @Column(name = "port", nullable = false)
     private String port;
 
-    @Column(name = "native_node", nullable = false)
-    @ColumnDefault("false")
-    private boolean nativeNode;
+    @OneToMany(mappedBy = "node", fetch = FetchType.LAZY, cascade = {CascadeType.DETACH, CascadeType.REMOVE}, orphanRemoval = true)
+    private List<MeasurementUnit> measurementUnits = new ArrayList<>();
 }

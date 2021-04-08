@@ -3,7 +3,10 @@ package ua.edu.donntu.service.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -13,42 +16,49 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import ua.edu.donntu.domain.Measurement;
+import ua.edu.donntu.domain.MeasurementUnit;
+import ua.edu.donntu.domain.Node;
 import ua.edu.donntu.dto.MessageInDTO;
 import ua.edu.donntu.dto.MessageOutDTO;
+import ua.edu.donntu.repository.MeasurementRepository;
+import ua.edu.donntu.repository.MeasurementUnitRepository;
 
-import java.net.ConnectException;
+import java.io.IOException;
 import java.util.Date;
-import java.util.concurrent.Callable;
 
 @Slf4j
 @Builder(toBuilder = true)
 @Getter
 @Setter
 @AllArgsConstructor
-public class PropagationThread implements Callable<MessageOutDTO> {
+public class SingleNodeMeasurementThread extends Thread {
 
+    private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+    private static final String TEST_FILE_NAME = "throughput_test_file.txt";
     private static final int TIMEOUT = 10 * 60 * 1000; // in ms
 
-    private String recipientHost;
-    private String recipientPort;
-    private String fileName;
+    private Measurement measurement;
+    private Node node;
+    private int size;
+    private int measurements;
     private byte[] fileArray;
 
-    private MessageOutDTO result;
-    private boolean done;
+    private MeasurementUnitRepository measurementUnitRepository;
+    private MeasurementRepository measurementRepository;
 
-    public PropagationThread(String recipientHost, String recipientPort, String fileName, byte[] fileArray) {
-        this.recipientHost = recipientHost;
-        this.recipientPort = recipientPort;
-        this.fileName = fileName;
-        this.fileArray = fileArray;
+    public void run() {
+        for (int i = 0; i < measurements; i++) {
+            mapResultToUnit(getFileUploadResult(node, size), node, measurement, size);
+        }
+        measurementRepository.saveAndFlush(measurement.toBuilder()
+                .finishDate(new Date())
+                .finished(true)
+                .build());
     }
 
-    @SneakyThrows
-    public MessageOutDTO call() {
-        if (!isDataValid()) {
-            return null;
-        }
+    private MessageOutDTO getFileUploadResult(Node node, int size) {
+        log.debug("Request to get file upload result for node {} and file size - {}", node, size);
         RequestConfig config = RequestConfig.custom()
                 .setConnectTimeout(TIMEOUT)
                 .setConnectionRequestTimeout(TIMEOUT)
@@ -58,9 +68,9 @@ public class PropagationThread implements Callable<MessageOutDTO> {
                 .setDefaultRequestConfig(config)
                 .build();
         ObjectMapper objectMapper = new ObjectMapper();
-        HttpPost uploadFile = new HttpPost("http://" + recipientHost + ":" + recipientPort + "/messages");
+        HttpPost uploadFile = new HttpPost("http://" + node.getHost() + ":" + node.getPort() + "/messages");
         Gson gson = new GsonBuilder()
-                .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+                .setDateFormat(DATE_FORMAT)
                 .create();
 
         MessageInDTO messageInDTO = MessageInDTO.builder()
@@ -76,7 +86,7 @@ public class PropagationThread implements Callable<MessageOutDTO> {
                         "file",
                         fileArray,
                         ContentType.MULTIPART_FORM_DATA,
-                        fileName)
+                        TEST_FILE_NAME)
                 .build();
 
         uploadFile.setEntity(entity);
@@ -85,20 +95,23 @@ public class PropagationThread implements Callable<MessageOutDTO> {
             HttpResponse response = httpClient.execute(uploadFile);
             log.debug("Propagation thread response: " + response.toString());
             return objectMapper.readValue(response.getEntity().getContent(), MessageOutDTO.class);
-        } catch (ConnectException exception) {
-            log.error("Propagation thread error: ", exception);
+        } catch (IOException exception) {
+            log.error("Propagation thread error: " + exception.getMessage(), exception);
         }
         return null;
     }
 
-    private boolean isDataValid() {
-        return recipientHost != null
-                && !recipientHost.isEmpty()
-                && recipientPort != null
-                && !recipientPort.isEmpty()
-                && fileArray != null
-                && fileArray.length > 0
-                && fileName != null
-                && !fileName.isEmpty();
+    private void mapResultToUnit(MessageOutDTO result, Node node, Measurement measurement, int size) {
+        log.debug("Request for map result to measurement unit: " + result);
+        if (result == null) {
+            return;
+        }
+        measurementUnitRepository.saveAndFlush(MeasurementUnit.builder()
+                .node(node)
+                .measurement(measurement)
+                .transmissionTime(result.getTransmissionTime())
+                .processingTime(result.getProcessingTime())
+                .hash(result.getHash())
+                .build());
     }
 }

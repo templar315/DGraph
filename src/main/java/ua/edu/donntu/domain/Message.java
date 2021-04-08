@@ -32,16 +32,19 @@ public class Message implements Serializable {
     private Date saveDate;
 
     @Column(name = "transmission_time", nullable = false)
-    private Long transmissionTime;
+    private long transmissionTime;
 
     @Column(name = "processing_time", nullable = false)
-    private Long processingTime;
+    private long processingTime;
 
     @Column(name = "file_path", nullable = false)
     private String filePath;
 
     @Column(name = "hash", nullable = false, unique = true)
     private String hash;
+
+    @Column(name = "size", nullable = false)
+    private int size;
 
     @Column(name = "sender", nullable = false)
     private String sender;
